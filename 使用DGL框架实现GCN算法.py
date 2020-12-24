@@ -66,7 +66,54 @@ class GCN(nn.Module):
  #### 以获得该样本所属的类别
  
  class Net(nn.Module):
-  def
- 
+  def __init__(self):
+      super(Net, self).__init__()
+      self.gcn1 = GCN(1433, 16, F.relu)
+      self.gcn2 = GCN(16, 7, F.relu)
+  
+  def forward(self, g, features):
+    x = self.gcn1(g, features)
+    x = self.gcn2(g, x)
+    return x
+  
+net = Net()
+print(net)
+  
+## setp6 加载cora数据集，并进行数据预处理
+from dgl.data import citation_graph as citegrh
+  
+def load_cora_data():
+  data = citegrh.load_cora()
+  features = th.FloatTensor(data.features)
+  labels = th.LongTensor(data.labels)
+  mask = th.ByteTensor(data.train_mask)
+  
+  g = data.graph
+  # add self loop
+  g.remove_edge_from(g.selfloop_edges())
+  g = DGLGraph(g)
+  g.add_edges(g.nodes(), g.nodes())
+  return g, features, labels, mask
 
-
+## step7 训练GCN神经网络
+import time
+import numpy as np
+g, features, labels, mask = load_cora_data()
+optimizer = th.optim.Adam(net.parameters(), lr=1e-3)
+dur = []
+for epoch in range(30):
+  if epoch >= 3:
+    t0 = time.time()
+   
+  logits = net(g, features)
+  logp = F.log_softmax(logits, 1)
+  loss = F.nll_loss(logp[mask], labels[mask])
+  
+  optimizer.zero_grad()
+  loss.backward()
+  optimizer.step()
+  if epoch >=3:
+        dur.append(time.time() - t0)
+  print("Epoch {:05d} | Loss {:.4f} | Time(s) {:.4f}".format(
+            epoch, loss.item(), np.mean(dur)))
+  
